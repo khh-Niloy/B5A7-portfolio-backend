@@ -1,20 +1,22 @@
 import app from "./app";
-// import { seedSuperAdmin } from "./app/utility/seedSuperAdmin"
 import { Server } from "http";
-import { envVars } from "./app/config/envVars";
+import { PrismaClient } from "@prisma/client";
+import { seedAdmin } from "./app/utils/seedAdmin";
 
 let server: Server;
+export const prisma = new PrismaClient()
 
 const startServer = async () => {
-  console.log(envVars.FRONTEND_URLS);
   server = app.listen(8000, () => {
+    prisma.$connect()
+    console.log("✅ prisma connected")
     console.log("✅ server is running");
   });
 };
 
 (async () => {
   await startServer();
-  // await seedSuperAdmin()
+  await seedAdmin()
 })();
 
 process.on("SIGTERM", () => {
