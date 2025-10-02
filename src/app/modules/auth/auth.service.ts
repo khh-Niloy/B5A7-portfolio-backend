@@ -32,7 +32,6 @@ const userLoginService = async (payload: LoginPayload) => {
   }
 
   const jwtPayload = {
-    role: user.role,
     email: user.email,
   };
 
