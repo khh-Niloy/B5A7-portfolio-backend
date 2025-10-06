@@ -27,13 +27,11 @@ const updateAboutContentService = async (payload: Partial<IAbout>, id: string) =
   console.log(payload);
   console.log(id);
   
-  // Check if document exists
   const existingDoc = await About.findById(id);
   if (!existingDoc) {
     throw new Error("About content not found");
   }
   
-  // Process sampleText if provided
   if (payload.aboutInfo?.sampleText) {
     payload.aboutInfo.sampleText = (
       payload.aboutInfo.sampleText as unknown as string
