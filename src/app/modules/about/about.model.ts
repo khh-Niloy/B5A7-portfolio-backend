@@ -2,6 +2,7 @@ import {
   IAbout,
   IAboutInfo,
   IContacts,
+  IExperience,
   IJourney,
   IUniversityInfo,
 } from "./about.interface";
@@ -42,11 +43,26 @@ const aboutInfoSchema = new Schema<IAboutInfo>(
   { _id: false }
 );
 
+const experienceSchema = new Schema<IExperience>(
+  {
+    companyName: { type: String, required: true },
+    role: { type: String, required: true },
+    startDate: { type: Date, required: true },
+    endDate: { type: String, required: true },
+    location: { type: String, required: true },
+    jobType: { type: String, required: true },
+    jobTechStack: { type: [String], required: true },
+    worked: { type: [String], required: true },
+  },
+  { _id: false }
+);
+
 export const aboutSchema = new Schema<IAbout>({
   universityInfo: universityInfoSchema,
   aboutInfo: aboutInfoSchema,
   journey: { type: [journeySchema], required: true },
   contacts: { type: [contactsSchema], required: true },
+  experience: { type: [experienceSchema], required: true },
 }, {
   timestamps: true,
 });
