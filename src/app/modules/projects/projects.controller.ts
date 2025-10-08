@@ -2,9 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { projectsServices } from "./projects.service";
 import { responseService } from "../../utils/response";
 
-// Normalizes various incoming tech fields into `techStack: string[]`
 const normalizeTechStack = (payload: any) => {
-  // Accept multiple possible field names from the client
   const candidates = [
     payload.techStack,
     payload.techStacks,
@@ -24,14 +22,13 @@ const normalizeTechStack = (payload: any) => {
       return value.map((v) => String(v).trim()).filter(Boolean);
     }
     if (typeof value === "string") {
-      // Try JSON array first
       try {
         const parsed = JSON.parse(value);
         if (Array.isArray(parsed)) {
           return parsed.map((v) => String(v).trim()).filter(Boolean);
         }
       } catch {
-        // Fallback to comma-separated list
+        return [];
       }
       return value
         .split(",")
@@ -46,7 +43,6 @@ const normalizeTechStack = (payload: any) => {
     payload.techStack = techStack;
   }
 
-  // Clean up other fields if present to avoid schema conflicts
   delete payload.techStacks;
   delete payload.tech;
   delete payload.techs;
@@ -54,7 +50,6 @@ const normalizeTechStack = (payload: any) => {
   return payload;
 };
 
-// Normalizes various incoming features fields into `features: string[]`
 const normalizeFeatures = (payload: any) => {
   const candidates = [
     payload.features,
@@ -81,7 +76,7 @@ const normalizeFeatures = (payload: any) => {
           return parsed.map((v) => String(v).trim()).filter(Boolean);
         }
       } catch {
-        // Fallback to comma-separated list
+        return [];
       }
       return value
         .split(",")
@@ -103,7 +98,6 @@ const normalizeFeatures = (payload: any) => {
   return payload;
 };
 
-// Normalizes various incoming dependencies fields into `dependencies: string`
 const normalizeDependencies = (payload: any) => {
   const candidates = [
     payload.dependencies,
@@ -126,7 +120,6 @@ const normalizeDependencies = (payload: any) => {
         .join(", ");
     }
     if (typeof value === "string") {
-      // Try JSON first
       try {
         const parsed = JSON.parse(value);
         if (Array.isArray(parsed)) {
@@ -139,11 +132,10 @@ const normalizeDependencies = (payload: any) => {
           return parsed.trim();
         }
       } catch {
-        // Not JSON; keep as entered
+        return "";
       }
       return value.trim();
     }
-    // Fallback: stringify
     return String(value ?? "").trim();
   };
 
@@ -164,16 +156,12 @@ const createProject = async (req: Request, res: Response, next: NextFunction) =>
     const files = (req.files as Express.Multer.File[]) || [];
     const payload: any = { ...req.body };
 
-    // Multer (cloudinary storage) gives each file a .path (the hosted URL)
     if (files.length > 0) {
       payload.image = files[0].path;
     }
 
-    // Normalize tech inputs to techStack: string[]
     normalizeTechStack(payload);
-    // Normalize features inputs to features: string[]
     normalizeFeatures(payload);
-    // Normalize dependencies input to dependencies: string
     normalizeDependencies(payload);
 
     const created = await projectsServices.createProjectService(payload);
@@ -200,11 +188,8 @@ const updateProject = async (req: Request, res: Response, next: NextFunction) =>
       payload.image = files[0].path;
     }
 
-    // Normalize tech inputs to techStack: string[]
     normalizeTechStack(payload);
-    // Normalize features inputs to features: string[]
     normalizeFeatures(payload);
-    // Normalize dependencies input to dependencies: string
     normalizeDependencies(payload);
 
     const updated = await projectsServices.updateProjectService(req.params.id, payload);
