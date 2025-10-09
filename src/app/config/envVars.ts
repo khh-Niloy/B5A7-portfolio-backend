@@ -13,6 +13,10 @@ interface IEnvVars {
   JWT_REFRESH_EXPIRES: string;
   BACKEND_URL: string;
   FRONTEND_URLS: string[];
+  MONGO_URI: string
+  CLOUDINARY_CLOUD_NAME: string
+  CLOUDINARY_API_KEY: string
+  CLOUDINARY_API_SECRET: string
 }
 
 const loadEnvVars = (): IEnvVars => {
@@ -28,6 +32,10 @@ const loadEnvVars = (): IEnvVars => {
     "JWT_REFRESH_EXPIRES",
     "BACKEND_URL",
     "FRONTEND_URLS",
+    "MONGO_URI",
+    "CLOUDINARY_CLOUD_NAME",
+    "CLOUDINARY_API_KEY",
+    "CLOUDINARY_API_SECRET"
   ];
   requiredEnvVar.forEach((key) => {
     if (!process.env[key]) {
@@ -46,6 +54,10 @@ const loadEnvVars = (): IEnvVars => {
     JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES as string,
     BACKEND_URL: process.env.BACKEND_URL as string,
     FRONTEND_URLS: JSON.parse(process.env.FRONTEND_URLS as string),
+    MONGO_URI: process.env.MONGO_URI as string,
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME as string,
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY as string,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET as string,
   };
 };
 

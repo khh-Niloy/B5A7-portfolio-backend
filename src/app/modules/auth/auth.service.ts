@@ -1,7 +1,7 @@
 import { JwtPayload } from "jsonwebtoken";
 import { cookiesService } from "../../utils/cookiesService";
 import { Response } from "express";
-import { prisma } from "../../../server";
+import { User } from "./user.model";
 import { jwtServices } from "../../utils/jwt";
 
 interface LoginPayload {
@@ -14,9 +14,7 @@ const userLoginService = async (payload: LoginPayload) => {
 
   // console.log(payload)
 
-  const user = await prisma.user.findUnique({
-    where: { email: email },
-  });
+  const user = await User.findOne({ email: email });
 
   if (!user) {
     throw new Error("User does not exist, Please register first");
@@ -43,6 +41,14 @@ const userLoginService = async (payload: LoginPayload) => {
 
 const userLogOutService = (res: Response) => {
   cookiesService.clearCookie(res);
+};
+
+const userGetMeService = async (email: string) => {
+  const user = await User.findOne({ email }).select('-password');
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return user;
 };
 
 // const getNewAccessTokenService = async(refreshToken: string)=>{
@@ -86,6 +92,7 @@ const userLogOutService = (res: Response) => {
 export const authServices = {
   userLoginService,
   userLogOutService,
+  userGetMeService,
   // getNewAccessTokenService,
   // changePasswordService
 };

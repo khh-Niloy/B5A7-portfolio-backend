@@ -5,8 +5,9 @@ import { responseService } from "../../utils/response";
 
 const userLogin = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log(req.body);
     const userLogin = await authServices.userLoginService(req.body);
-    const { accessRefreshToken } = userLogin;
+    const { accessRefreshToken, user } = userLogin;
 
     cookiesService.setCookie(
       res,
@@ -17,14 +18,14 @@ const userLogin = async (req: Request, res: Response, next: NextFunction) => {
     responseService.successResponse(res, {
       status: 200,
       message: "user logged in",
-      data: userLogin,
+      data: user,
     });
   } catch (error) {
     responseService.errorResponse(res, {
       status: 401,
       message: (error as Error).message,
-      // data: error,
-    })
+      data: error,
+    });
   }
 };
 
@@ -40,7 +41,30 @@ const userLogOut = async (req: Request, res: Response, next: NextFunction) => {
       status: 400,
       message: (error as Error).message,
       // data: error,
-    })
+    });
+  }
+};
+
+const userGetMe = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return responseService.errorResponse(res, {
+        status: 401,
+        message: "User not authenticated",
+      });
+    }
+    const userInfo = await authServices.userGetMeService(user.email);
+    responseService.successResponse(res, {
+      status: 200,
+      message: "User info fetched successfully",
+      data: userInfo,
+    });
+  } catch (error) {
+    responseService.errorResponse(res, {
+      status: 400,
+      message: (error as Error).message,
+    });
   }
 };
 
@@ -83,6 +107,7 @@ const userLogOut = async (req: Request, res: Response, next: NextFunction) => {
 export const authController = {
   userLogin,
   userLogOut,
+  userGetMe,
   // getNewAccessToken,
   // changePassword
 };

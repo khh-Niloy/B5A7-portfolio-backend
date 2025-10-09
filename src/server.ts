@@ -1,15 +1,15 @@
 import app from "./app";
 import { Server } from "http";
-import { PrismaClient } from "@prisma/client";
 import { seedAdmin } from "./app/utils/seedAdmin";
+import mongoose from "mongoose";
+import { envVars } from "./app/config/envVars";
 
 let server: Server;
-export const prisma = new PrismaClient()
 
 const startServer = async () => {
+  await mongoose.connect(envVars.MONGO_URI)
   server = app.listen(8000, () => {
-    prisma.$connect()
-    console.log("✅ prisma connected")
+    console.log("✅ mongoose connected")
     console.log("✅ server is running");
   });
 };
