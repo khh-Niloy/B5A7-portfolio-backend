@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "https://b5a7-portfolio.vercel.app",
+    origin: ["https://b5a7-portfolio.vercel.app", "http://localhost:3000"],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
