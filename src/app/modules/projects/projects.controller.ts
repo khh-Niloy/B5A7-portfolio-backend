@@ -150,9 +150,37 @@ const normalizeDependencies = (payload: any) => {
   return payload;
 };
 
+const validateProjectType = (payload: any) => {
+  const validTypes = ["client project", "personal project"];
+  
+  // Check if projectType exists in the payload (even if it's an empty string or undefined)
+  if (payload.hasOwnProperty("projectType") || payload.projectType !== undefined) {
+    let projectType = String(payload.projectType || "").trim();
+    
+    // Handle "undefined" string case
+    if (projectType === "undefined" || projectType === "") {
+      projectType = "personal project";
+    }
+    
+    // Validate the projectType
+    if (!validTypes.includes(projectType)) {
+      throw new Error(`projectType must be one of: ${validTypes.join(", ")}`);
+    }
+    
+    // Set the validated projectType
+    payload.projectType = projectType;
+  } else {
+    // If projectType is not provided at all, set default for create operations
+    // (For updates, we handle this in the service)
+    payload.projectType = "personal project";
+  }
+  
+  return payload;
+};
+
 const createProject = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log(req.body);
+    console.log("Create project request body:", req.body);
     const files = (req.files as Express.Multer.File[]) || [];
     const payload: any = { ...req.body };
 
@@ -163,6 +191,10 @@ const createProject = async (req: Request, res: Response, next: NextFunction) =>
     normalizeTechStack(payload);
     normalizeFeatures(payload);
     normalizeDependencies(payload);
+    validateProjectType(payload);
+
+    console.log("Payload after normalization:", payload);
+    console.log("projectType in payload:", payload.projectType);
 
     const created = await projectsServices.createProjectService(payload);
     responseService.successResponse(res, {
@@ -171,6 +203,7 @@ const createProject = async (req: Request, res: Response, next: NextFunction) =>
       data: created,
     });
   } catch (error) {
+    console.error("Create project error:", error);
     responseService.errorResponse(res, {
       status: 400,
       message: (error as Error).message,
@@ -180,7 +213,7 @@ const createProject = async (req: Request, res: Response, next: NextFunction) =>
 
 const updateProject = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log(req.body);
+    console.log("Update request body:", req.body);
     const files = (req.files as Express.Multer.File[]) || [];
     const payload: any = { ...req.body };
 
@@ -191,6 +224,10 @@ const updateProject = async (req: Request, res: Response, next: NextFunction) =>
     normalizeTechStack(payload);
     normalizeFeatures(payload);
     normalizeDependencies(payload);
+    validateProjectType(payload);
+
+    console.log("Payload after normalization:", payload);
+    console.log("projectType in payload:", payload.projectType);
 
     const updated = await projectsServices.updateProjectService(req.params.id, payload);
     responseService.successResponse(res, {
@@ -199,6 +236,7 @@ const updateProject = async (req: Request, res: Response, next: NextFunction) =>
       data: updated,
     });
   } catch (error) {
+    console.error("Update project error:", error);
     responseService.errorResponse(res, {
       status: 400,
       message: (error as Error).message,

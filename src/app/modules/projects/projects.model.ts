@@ -13,6 +13,12 @@ export const projectsSchema = new Schema<IProjects>({
   dependencies: { type: String, required: true },
   responsibilities: { type: String, required: true },
   githubRepo: { type: String, required: true },
+  projectType: { 
+    type: String, 
+    required: true,
+    enum: ["client project", "personal project"],
+    default: "personal project",
+  },
 }, {
   timestamps: true,
 });

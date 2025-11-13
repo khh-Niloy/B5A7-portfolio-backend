@@ -7,6 +7,15 @@ const createProjectService = async (payload: IProjects) => {
 };
 
 const updateProjectService = async (id: string, payload: Partial<IProjects>) => {
+  // If projectType is not in payload, check if existing document has it
+  // If not, set default to avoid validation errors
+  if (!payload.projectType) {
+    const existingProject = await Projects.findById(id);
+    if (existingProject && !existingProject.projectType) {
+      payload.projectType = "personal project";
+    }
+  }
+  
   const updated = await Projects.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,

@@ -10,4 +10,5 @@ export interface IProjects {
   dependencies: string;
   responsibilities: string;
   githubRepo: string;
+  projectType: "client project" | "personal project";
 }
