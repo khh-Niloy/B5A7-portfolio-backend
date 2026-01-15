@@ -99,11 +99,7 @@ const normalizeFeatures = (payload: any) => {
 };
 
 const normalizeDependencies = (payload: any) => {
-  const candidates = [
-    payload.dependencies,
-    payload.dependency,
-    payload.deps,
-  ];
+  const candidates = [payload.dependencies, payload.dependency, payload.deps];
 
   let source: unknown = undefined;
   for (const candidate of candidates) {
@@ -152,21 +148,24 @@ const normalizeDependencies = (payload: any) => {
 
 const validateProjectType = (payload: any) => {
   const validTypes = ["client project", "personal project"];
-  
+
   // Check if projectType exists in the payload (even if it's an empty string or undefined)
-  if (payload.hasOwnProperty("projectType") || payload.projectType !== undefined) {
+  if (
+    payload.hasOwnProperty("projectType") ||
+    payload.projectType !== undefined
+  ) {
     let projectType = String(payload.projectType || "").trim();
-    
+
     // Handle "undefined" string case
     if (projectType === "undefined" || projectType === "") {
       projectType = "personal project";
     }
-    
+
     // Validate the projectType
     if (!validTypes.includes(projectType)) {
       throw new Error(`projectType must be one of: ${validTypes.join(", ")}`);
     }
-    
+
     // Set the validated projectType
     payload.projectType = projectType;
   } else {
@@ -174,11 +173,15 @@ const validateProjectType = (payload: any) => {
     // (For updates, we handle this in the service)
     payload.projectType = "personal project";
   }
-  
+
   return payload;
 };
 
-const createProject = async (req: Request, res: Response, next: NextFunction) => {
+const createProject = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     console.log("Create project request body:", req.body);
     const files = (req.files as Express.Multer.File[]) || [];
@@ -211,11 +214,18 @@ const createProject = async (req: Request, res: Response, next: NextFunction) =>
   }
 };
 
-const updateProject = async (req: Request, res: Response, next: NextFunction) => {
+const updateProject = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     console.log("Update request body:", req.body);
     const files = (req.files as Express.Multer.File[]) || [];
     const payload: any = { ...req.body };
+
+    console.log("Files:", files);
+    console.log("Payload before normalization:", payload);
 
     if (files.length > 0) {
       payload.image = files[0].path;
@@ -225,11 +235,18 @@ const updateProject = async (req: Request, res: Response, next: NextFunction) =>
     normalizeFeatures(payload);
     normalizeDependencies(payload);
     validateProjectType(payload);
+    console.log(
+      "DEBUG: technicalHighlights in req.body:",
+      req.body.technicalHighlights
+    );
 
     console.log("Payload after normalization:", payload);
     console.log("projectType in payload:", payload.projectType);
 
-    const updated = await projectsServices.updateProjectService(req.params.id, payload);
+    const updated = await projectsServices.updateProjectService(
+      req.params.id,
+      payload
+    );
     responseService.successResponse(res, {
       status: 200,
       message: "Project updated successfully",
@@ -244,7 +261,11 @@ const updateProject = async (req: Request, res: Response, next: NextFunction) =>
   }
 };
 
-const getProjectById = async (req: Request, res: Response, next: NextFunction) => {
+const getProjectById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const data = await projectsServices.getProjectByIdService(req.params.id);
     responseService.successResponse(res, {
@@ -260,7 +281,11 @@ const getProjectById = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
-const getAllProjects = async (req: Request, res: Response, next: NextFunction) => {
+const getAllProjects = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const data = await projectsServices.getAllProjectsService();
     responseService.successResponse(res, {
@@ -268,8 +293,7 @@ const getAllProjects = async (req: Request, res: Response, next: NextFunction) =
       message: "Projects fetched successfully",
       data,
     });
-  }
-  catch (error) {
+  } catch (error) {
     responseService.errorResponse(res, {
       status: 400,
       message: (error as Error).message,
