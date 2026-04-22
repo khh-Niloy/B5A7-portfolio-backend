@@ -1,5 +1,6 @@
 import { IAbout } from "./about.interface";
 import { About } from "./about.model";
+import { cacheData, deleteCache, getCachedData } from "../../utils/redis";
 
 const createAboutService = async (payload: IAbout) => {
   if (payload?.aboutInfo?.sampleText) {
@@ -11,11 +12,16 @@ const createAboutService = async (payload: IAbout) => {
   }
   const aboutContent = await About.create(payload);
   console.log(aboutContent);
+  await deleteCache("about_content");
   return aboutContent;
 };
 
 const getAboutContentService = async () => {
+  const cachedAbout = await getCachedData<IAbout[]>("about_content");
+  if (cachedAbout) return cachedAbout;
+
   const aboutContent = await About.find();
+  await cacheData("about_content", aboutContent);
   return aboutContent;
 };
 
@@ -44,6 +50,9 @@ const updateAboutContentService = async (payload: Partial<IAbout>, id: string) =
     new: true,
     runValidators: true,
   });
+  if (updatedAboutContent) {
+    await deleteCache("about_content");
+  }
   return updatedAboutContent;
 };
 

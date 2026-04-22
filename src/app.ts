@@ -3,10 +3,12 @@ import { routes } from "./app/routes";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { envVars } from "./app/config/envVars";
+import { trackVisitor } from "./app/middleware/trackVisitor";
 
 export const app = express();
 app.use(express.json());
 app.use(cookieParser());
+app.use(trackVisitor);
 app.use(
   cors({
     origin: ["https://b5a7-portfolio.vercel.app", "http://localhost:3000"],

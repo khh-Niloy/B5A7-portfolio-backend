@@ -17,6 +17,7 @@ interface IEnvVars {
   CLOUDINARY_CLOUD_NAME: string
   CLOUDINARY_API_KEY: string
   CLOUDINARY_API_SECRET: string
+  REDIS_URL: string
 }
 
 const loadEnvVars = (): IEnvVars => {
@@ -35,7 +36,8 @@ const loadEnvVars = (): IEnvVars => {
     "MONGO_URI",
     "CLOUDINARY_CLOUD_NAME",
     "CLOUDINARY_API_KEY",
-    "CLOUDINARY_API_SECRET"
+    "CLOUDINARY_API_SECRET",
+    "REDIS_URL"
   ];
   requiredEnvVar.forEach((key) => {
     if (!process.env[key]) {
@@ -58,6 +60,7 @@ const loadEnvVars = (): IEnvVars => {
     CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME as string,
     CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY as string,
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET as string,
+    REDIS_URL: process.env.REDIS_URL as string,
   };
 };
 
