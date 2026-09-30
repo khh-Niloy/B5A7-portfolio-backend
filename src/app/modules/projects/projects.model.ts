@@ -22,6 +22,7 @@ export const projectsSchema = new Schema<IProjects>(
       enum: ["client project", "personal project"],
       default: "personal project",
     },
+    isActive: { type: Boolean, default: true },
   },
   {
     timestamps: true,

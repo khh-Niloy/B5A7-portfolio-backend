@@ -13,4 +13,5 @@ export interface IProjects {
   backendRepo: string;
   technicalHighlights: string;
   projectType: "client project" | "personal project";
+  isActive?: boolean;
 }
