@@ -44,7 +44,7 @@ const getAllProjectsService = async () => {
   const cachedProjects = await getCachedData<IProjects[]>("all_projects");
   if (cachedProjects) return cachedProjects;
 
-  const projects = await Projects.find();
+  const projects = await Projects.find().sort({ createdAt: -1 });
   await cacheData("all_projects", projects);
   return projects;
 };

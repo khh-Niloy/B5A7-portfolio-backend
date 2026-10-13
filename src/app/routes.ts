@@ -5,6 +5,7 @@ import { projectsRoutes } from "./modules/projects/projects.routes";
 import { blogRoutes } from "./modules/blog/blog.routes";
 import { authRoutes } from "./modules/auth/auth.routes";
 import { visitorRoutes } from "./modules/visitor/visitor.routes";
+import { contactRoutes } from "./modules/contact/contact.routes";
 
 export const routes = Router()
 
@@ -15,6 +16,7 @@ const allRoutes = [
     {path: "/projects", route: projectsRoutes},
     {path: "/blog", route: blogRoutes},
     {path: "/visitors", route: visitorRoutes},
+    {path: "/contact", route: contactRoutes},
 ]
 
 allRoutes.forEach(({path, route}) => routes.use(path, route))

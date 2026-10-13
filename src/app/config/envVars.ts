@@ -18,6 +18,8 @@ interface IEnvVars {
   CLOUDINARY_API_KEY: string
   CLOUDINARY_API_SECRET: string
   REDIS_URL: string
+  EMAIL_USER: string
+  EMAIL_PASS: string
 }
 
 const loadEnvVars = (): IEnvVars => {
@@ -37,7 +39,9 @@ const loadEnvVars = (): IEnvVars => {
     "CLOUDINARY_CLOUD_NAME",
     "CLOUDINARY_API_KEY",
     "CLOUDINARY_API_SECRET",
-    "REDIS_URL"
+    "REDIS_URL",
+    "EMAIL_USER",
+    "EMAIL_PASS"
   ];
   requiredEnvVar.forEach((key) => {
     if (!process.env[key]) {
@@ -61,6 +65,8 @@ const loadEnvVars = (): IEnvVars => {
     CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY as string,
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET as string,
     REDIS_URL: process.env.REDIS_URL as string,
+    EMAIL_USER: process.env.EMAIL_USER as string,
+    EMAIL_PASS: process.env.EMAIL_PASS as string,
   };
 };
 
