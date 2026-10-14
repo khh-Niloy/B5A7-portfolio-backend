@@ -88,11 +88,34 @@ const getAllBlogs = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+const deleteBlog = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const deleted = await blogServices.deleteBlogService(req.params.id);
+    if (!deleted) {
+      return responseService.errorResponse(res, {
+        status: 404,
+        message: "Blog not found",
+      });
+    }
+    responseService.successResponse(res, {
+      status: 200,
+      message: "Blog deleted successfully",
+      data: deleted,
+    });
+  } catch (error) {
+    responseService.errorResponse(res, {
+      status: 400,
+      message: (error as Error).message,
+    });
+  }
+};
+
 export const blogController = {
   createBlog,
   updateBlog,
   getBlogById,
   getAllBlogs,
+  deleteBlog,
 };
 
 

@@ -5,10 +5,11 @@ export const skillsSchema = new Schema<ISkills>(
   {
     category: {
       type: String,
-      enum: ["frontend", "backend", "database", "Tools & Services"],
       required: true,
+      trim: true,
     },
     skills: { type: [String], required: true },
+    order: { type: Number, default: 0 },
   },
   {
     timestamps: true,

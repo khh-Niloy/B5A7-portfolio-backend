@@ -36,6 +36,52 @@ const createContactMessage = async (
   }
 };
 
+const getAllContactMessages = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const messages = await contactServices.getAllContactMessages();
+    responseService.successResponse(res, {
+      status: 200,
+      message: "Contact messages fetched successfully",
+      data: messages,
+    });
+  } catch (error) {
+    responseService.errorResponse(res, {
+      status: 500,
+      message: (error as Error).message || "Failed to fetch contact messages",
+    });
+  }
+};
+
+const deleteContactMessage = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const deleted = await contactServices.deleteContactMessage(req.params.id);
+    if (!deleted) {
+      return responseService.errorResponse(res, {
+        status: 404,
+        message: "Contact message not found",
+      });
+    }
+    responseService.successResponse(res, {
+      status: 200,
+      message: "Contact message deleted successfully",
+      data: deleted,
+    });
+  } catch (error) {
+    responseService.errorResponse(res, {
+      status: 500,
+      message: (error as Error).message || "Failed to delete contact message",
+    });
+  }
+};
+
 export const contactController = {
   createContactMessage,
+  getAllContactMessages,
+  deleteContactMessage,
 };

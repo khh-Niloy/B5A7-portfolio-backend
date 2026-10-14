@@ -4,55 +4,77 @@ import { cacheData, deleteCache, getCachedData } from "../../utils/redis";
 
 const createAboutService = async (payload: IAbout) => {
   if (payload?.aboutInfo?.sampleText) {
-    payload.aboutInfo.sampleText = (
-      payload?.aboutInfo?.sampleText as unknown as string
-    )
-      .split(",")
-      .map((item) => item.trim());
+    if (typeof payload.aboutInfo.sampleText === "string") {
+      payload.aboutInfo.sampleText = (payload.aboutInfo.sampleText as string)
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
   }
   const aboutContent = await About.create(payload);
-  console.log(aboutContent);
-  await deleteCache("about_content");
+  try {
+    await deleteCache("about_content");
+  } catch (err) {
+    console.error("Redis cache delete error:", err);
+  }
   return aboutContent;
 };
 
 const getAboutContentService = async () => {
-  const cachedAbout = await getCachedData<IAbout[]>("about_content");
-  if (cachedAbout) return cachedAbout;
+  try {
+    const cachedAbout = await getCachedData<IAbout[]>("about_content");
+    if (cachedAbout && Array.isArray(cachedAbout) && cachedAbout.length > 0) {
+      return cachedAbout;
+    }
+  } catch (err) {
+    console.error("Redis cache get error:", err);
+  }
 
   const aboutContent = await About.find();
-  await cacheData("about_content", aboutContent);
+  try {
+    if (aboutContent && aboutContent.length > 0) {
+      await cacheData("about_content", aboutContent);
+    }
+  } catch (err) {
+    console.error("Redis cache set error:", err);
+  }
   return aboutContent;
 };
 
-const updateAboutContentService = async (payload: Partial<IAbout>, id: string) => {
-  if (!id) {
-    throw new Error("ID is required");
+const updateAboutContentService = async (payload: Partial<IAbout>, id?: string) => {
+  if (payload.aboutInfo?.sampleText) {
+    if (typeof payload.aboutInfo.sampleText === "string") {
+      payload.aboutInfo.sampleText = (payload.aboutInfo.sampleText as string)
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
   }
 
-  console.log(payload);
-  console.log(id);
-  
-  const existingDoc = await About.findById(id);
+  let existingDoc = null;
+  if (id && id !== "undefined" && id !== "null") {
+    existingDoc = await About.findById(id);
+  }
   if (!existingDoc) {
-    throw new Error("About content not found");
+    existingDoc = await About.findOne();
   }
-  
-  if (payload.aboutInfo?.sampleText) {
-    payload.aboutInfo.sampleText = (
-      payload.aboutInfo.sampleText as unknown as string
-    )
-      .split(",")
-      .map((item) => item.trim());
+
+  let updatedAboutContent;
+  if (existingDoc) {
+    updatedAboutContent = await About.findByIdAndUpdate(existingDoc._id, payload, {
+      new: true,
+      runValidators: true,
+    });
+  } else {
+    updatedAboutContent = await About.create(payload);
   }
-  
-  const updatedAboutContent = await About.findByIdAndUpdate(id, payload, {
-    new: true,
-    runValidators: true,
-  });
-  if (updatedAboutContent) {
+
+  try {
     await deleteCache("about_content");
+  } catch (err) {
+    console.error("Redis cache delete error:", err);
   }
+
   return updatedAboutContent;
 };
 

@@ -4,13 +4,15 @@ import { cacheData, deleteCache, getCachedData } from "../../utils/redis";
 
 const createProjectService = async (payload: IProjects) => {
   const project = await Projects.create(payload);
-  await deleteCache("all_projects");
+  try {
+    await deleteCache("all_projects");
+  } catch (err) {
+    console.error("Redis cache delete error:", err);
+  }
   return project;
 };
 
 const updateProjectService = async (id: string, payload: Partial<IProjects>) => {
-  // If projectType is not in payload, check if existing document has it
-  // If not, set default to avoid validation errors
   if (!payload.projectType) {
     const existingProject = await Projects.findById(id);
     if (existingProject && !existingProject.projectType) {
@@ -23,30 +25,67 @@ const updateProjectService = async (id: string, payload: Partial<IProjects>) => 
     runValidators: true,
   });
   if (updated) {
-    await deleteCache(`project_${id}`);
-    await deleteCache("all_projects");
+    try {
+      await deleteCache(`project_${id}`);
+      await deleteCache("all_projects");
+    } catch (err) {
+      console.error("Redis cache delete error:", err);
+    }
   }
   return updated;
 };
 
 const getProjectByIdService = async (id: string) => {
-  const cachedProject = await getCachedData<IProjects>(`project_${id}`);
-  if (cachedProject) return cachedProject;
+  try {
+    const cachedProject = await getCachedData<IProjects>(`project_${id}`);
+    if (cachedProject) return cachedProject;
+  } catch (err) {
+    console.error("Redis cache get error:", err);
+  }
 
   const project = await Projects.findById(id);
   if (project) {
-    await cacheData(`project_${id}`, project);
+    try {
+      await cacheData(`project_${id}`, project);
+    } catch (err) {
+      console.error("Redis cache set error:", err);
+    }
   }
   return project;
 };
 
 const getAllProjectsService = async () => {
-  const cachedProjects = await getCachedData<IProjects[]>("all_projects");
-  if (cachedProjects) return cachedProjects;
+  try {
+    const cachedProjects = await getCachedData<IProjects[]>("all_projects");
+    if (cachedProjects && Array.isArray(cachedProjects) && cachedProjects.length > 0) {
+      return cachedProjects;
+    }
+  } catch (err) {
+    console.error("Redis cache get error:", err);
+  }
 
   const projects = await Projects.find().sort({ createdAt: -1 });
-  await cacheData("all_projects", projects);
+  try {
+    if (projects && projects.length > 0) {
+      await cacheData("all_projects", projects);
+    }
+  } catch (err) {
+    console.error("Redis cache set error:", err);
+  }
   return projects;
+};
+
+const deleteProjectService = async (id: string) => {
+  const deleted = await Projects.findByIdAndDelete(id);
+  if (deleted) {
+    try {
+      await deleteCache(`project_${id}`);
+      await deleteCache("all_projects");
+    } catch (err) {
+      console.error("Redis cache delete error:", err);
+    }
+  }
+  return deleted;
 };
 
 export const projectsServices = {
@@ -54,4 +93,5 @@ export const projectsServices = {
   updateProjectService,
   getProjectByIdService,
   getAllProjectsService,
+  deleteProjectService,
 };

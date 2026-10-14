@@ -6,6 +6,7 @@ export const blogRoutes = Router()
 
 blogRoutes.post("/", multerUpload.array("files"), blogController.createBlog)
 blogRoutes.patch("/:id", multerUpload.array("files"), blogController.updateBlog)
+blogRoutes.delete("/:id", blogController.deleteBlog)
 blogRoutes.get("/:id", blogController.getBlogById)
 blogRoutes.get("/", blogController.getAllBlogs)
 

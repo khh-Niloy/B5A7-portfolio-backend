@@ -301,9 +301,36 @@ const getAllProjects = async (
   }
 };
 
+const deleteProject = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const deleted = await projectsServices.deleteProjectService(req.params.id);
+    if (!deleted) {
+      return responseService.errorResponse(res, {
+        status: 404,
+        message: "Project not found",
+      });
+    }
+    responseService.successResponse(res, {
+      status: 200,
+      message: "Project deleted successfully",
+      data: deleted,
+    });
+  } catch (error) {
+    responseService.errorResponse(res, {
+      status: 400,
+      message: (error as Error).message,
+    });
+  }
+};
+
 export const projectsController = {
   createProject,
   updateProject,
   getProjectById,
   getAllProjects,
+  deleteProject,
 };

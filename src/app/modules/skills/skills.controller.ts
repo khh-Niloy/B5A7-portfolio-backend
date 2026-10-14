@@ -108,10 +108,33 @@ const upsertSkillsForCategory = async (req: Request, res: Response, next: NextFu
   }
 };
 
+const deleteSkills = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const deleted = await skillsServices.deleteSkillsService(req.params.id);
+    if (!deleted) {
+      return responseService.errorResponse(res, {
+        status: 404,
+        message: "Skill category not found",
+      });
+    }
+    responseService.successResponse(res, {
+      status: 200,
+      message: "Skill category deleted successfully",
+      data: deleted,
+    });
+  } catch (error) {
+    responseService.errorResponse(res, {
+      status: 400,
+      message: (error as Error).message,
+    });
+  }
+};
+
 export const skillsController = {
   createSkills,
   getSkills,
   updateSkills,
+  deleteSkills,
   addSkillsToCategory,
   upsertSkillsForCategory,
 };

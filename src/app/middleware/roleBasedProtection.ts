@@ -9,24 +9,40 @@ export const roleBasedProtection = async (
   res: Response,
   next: NextFunction
 ) => {
-  const accessToken = req.cookies.accessToken;
+  try {
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : undefined;
+    const accessToken = req.cookies?.accessToken || bearerToken;
 
-  if (!accessToken) {
-    throw new Error("access token not found!");
+    if (!accessToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token missing. Please log in.",
+      });
+    }
+
+    const userInfo = jwtServices.verifyToken(
+      accessToken,
+      envVars.JWT_ACCESS_SECRET
+    ) as JwtPayload;
+
+    const user = await User.findOne({ email: userInfo.email });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found or session expired.",
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: (error as Error).message || "Unauthorized access.",
+    });
   }
-
-  const userInfoJWTAccessToken = jwtServices.verifyToken(
-    accessToken,
-    envVars.JWT_ACCESS_SECRET
-  ) as JwtPayload;
-
-  const user = await User.findOne({ email: userInfoJWTAccessToken.email });
-
-  if (!user) {
-    throw new Error("user found!");
-  }
-
-  req.user = user;
-
-  next();
 };
