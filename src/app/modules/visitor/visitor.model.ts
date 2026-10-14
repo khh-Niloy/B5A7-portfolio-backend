@@ -1,9 +1,5 @@
 import { Schema, model } from "mongoose";
-
-export interface IVisitor {
-  date: string; // YYYY-MM-DD
-  count: number;
-}
+import { IVisitor } from "./visitor.interface";
 
 const visitorSchema = new Schema<IVisitor>(
   {
@@ -14,3 +10,4 @@ const visitorSchema = new Schema<IVisitor>(
 );
 
 export const Visitor = model<IVisitor>("Visitor", visitorSchema);
+export { VisitorLog } from "./visitorLog.model";
