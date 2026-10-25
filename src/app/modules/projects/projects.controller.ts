@@ -151,7 +151,7 @@ const validateProjectType = (payload: any) => {
 
   // Check if projectType exists in the payload (even if it's an empty string or undefined)
   if (
-    payload.hasOwnProperty("projectType") ||
+    "projectType" in payload ||
     payload.projectType !== undefined
   ) {
     let projectType = String(payload.projectType || "").trim();
@@ -177,6 +177,66 @@ const validateProjectType = (payload: any) => {
   return payload;
 };
 
+const handleProjectImages = (payload: any, files: Express.Multer.File[]) => {
+  // 1. Thumbnail file for cards
+  const thumbnailFile = files.find(
+    (f) => f.fieldname === "thumbnail" || f.fieldname === "image"
+  );
+  if (thumbnailFile) {
+    payload.image = thumbnailFile.path;
+  } else if (!payload.image && files.length > 0 && files[0].fieldname === "files") {
+    payload.image = files[0].path;
+  }
+
+  // 2. Existing images (when editing, frontend can send existingImages as JSON string or array)
+  let existingImages: string[] = [];
+  const rawExisting = payload.existingImages !== undefined ? payload.existingImages : payload.images;
+  if (rawExisting !== undefined && rawExisting !== null) {
+    try {
+      const parsed = typeof rawExisting === "string" ? JSON.parse(rawExisting) : rawExisting;
+      if (Array.isArray(parsed)) {
+        existingImages = parsed.map((img) => String(img).trim()).filter(Boolean);
+      } else if (typeof parsed === "string") {
+        existingImages = [parsed.trim()].filter(Boolean);
+      }
+    } catch {
+      if (typeof rawExisting === "string") {
+        existingImages = rawExisting
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+      }
+    }
+  }
+
+  // 3. New gallery files uploaded
+  const newGalleryFiles = files.filter(
+    (f) =>
+      f.fieldname === "images" ||
+      f.fieldname === "gallery" ||
+      (f.fieldname === "files" && f !== thumbnailFile)
+  );
+  const newGalleryUrls = newGalleryFiles.map((f) => f.path);
+
+  // If new gallery images or existing images were provided, update payload.images
+  if (
+    newGalleryUrls.length > 0 ||
+    payload.existingImages !== undefined ||
+    (payload.images !== undefined && typeof payload.images === "string")
+  ) {
+    payload.images = [...existingImages, ...newGalleryUrls];
+  } else if (!payload.images && existingImages.length > 0) {
+    payload.images = existingImages;
+  }
+
+  // If payload.image exists and payload.images is empty or not set, ensure thumbnail is in images
+  if (payload.image && (!payload.images || payload.images.length === 0)) {
+    payload.images = [payload.image];
+  }
+
+  delete payload.existingImages;
+};
+
 const createProject = async (
   req: Request,
   res: Response,
@@ -187,9 +247,7 @@ const createProject = async (
     const files = (req.files as Express.Multer.File[]) || [];
     const payload: any = { ...req.body };
 
-    if (files.length > 0) {
-      payload.image = files[0].path;
-    }
+    handleProjectImages(payload, files);
 
     normalizeTechStack(payload);
     normalizeFeatures(payload);
@@ -227,9 +285,7 @@ const updateProject = async (
     console.log("Files:", files);
     console.log("Payload before normalization:", payload);
 
-    if (files.length > 0) {
-      payload.image = files[0].path;
-    }
+    handleProjectImages(payload, files);
 
     normalizeTechStack(payload);
     normalizeFeatures(payload);
