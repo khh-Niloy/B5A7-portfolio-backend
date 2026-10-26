@@ -88,14 +88,19 @@ const getStats = async (req: Request, res: Response) => {
  */
 const getLogs = async (req: Request, res: Response) => {
   try {
+    const isBotParam = req.query.isBot;
+    const isBot =
+      isBotParam !== undefined && isBotParam !== "" && isBotParam !== "all"
+        ? isBotParam === "true"
+        : undefined;
+
     const result = await visitorServices.getVisitorLogs({
       page: req.query.page ? Number(req.query.page) : undefined,
       limit: req.query.limit ? Number(req.query.limit) : undefined,
       country: req.query.country as string,
-      isBot:
-        req.query.isBot !== undefined
-          ? req.query.isBot === "true"
-          : undefined,
+      deviceType: req.query.deviceType as string,
+      searchTerm: req.query.searchTerm as string,
+      isBot,
     });
 
     res.status(200).json({
@@ -112,9 +117,60 @@ const getLogs = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Controller to delete a visitor log entry
+ */
+const deleteLog = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await visitorServices.deleteVisitorLog(id);
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: "Visitor log not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Visitor log deleted successfully",
+      data: result,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete visitor log",
+    });
+  }
+};
+
+/**
+ * Controller to bulk clear logs (e.g. bots only)
+ */
+const clearLogs = async (req: Request, res: Response) => {
+  try {
+    const type = req.query.type as string;
+    const result = await visitorServices.clearVisitorLogs(type);
+
+    res.status(200).json({
+      success: true,
+      message: `Visitor logs cleared successfully (${result.deletedCount || 0} removed)`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to clear visitor logs",
+    });
+  }
+};
+
 export const visitorControllers = {
   trackVisitor,
   recordDuration,
   getStats,
   getLogs,
+  deleteLog,
+  clearLogs,
 };

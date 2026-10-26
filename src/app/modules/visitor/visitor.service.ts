@@ -221,7 +221,9 @@ const trackVisit = async () => {
 
   try {
     await redis.incr(key);
-  } catch {}
+  } catch {
+    // Redis optional, proceed to database
+  }
 
   await Visitor.findOneAndUpdate(
     { date: today },
@@ -231,36 +233,151 @@ const trackVisit = async () => {
 };
 
 /**
- * Retrieve daily aggregated stats
+ * Retrieve comprehensive aggregated stats including daily visits, device breakdown, top countries, and top pages
  */
 const getVisitorStats = async () => {
-  const stats = await Visitor.find().sort({ date: -1 }).limit(30);
-  return stats;
+  const [
+    dailyRaw,
+    totalCountResult,
+    totalLogs,
+    uniqueVisitors,
+    avgDurationResult,
+    deviceStats,
+    countryStats,
+    browserStats,
+    topPages,
+  ] = await Promise.all([
+    Visitor.find().sort({ date: -1 }).limit(30).lean(),
+    Visitor.aggregate([
+      { $group: { _id: null, total: { $sum: "$count" } } },
+    ]),
+    VisitorLog.countDocuments(),
+    VisitorLog.distinct("visitorId"),
+    VisitorLog.aggregate([
+      { $match: { durationSeconds: { $gt: 0 } } },
+      { $group: { _id: null, avgDuration: { $avg: "$durationSeconds" } } },
+    ]),
+    VisitorLog.aggregate([
+      {
+        $group: {
+          _id: { $ifNull: ["$deviceType", "desktop"] },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+    ]),
+    VisitorLog.aggregate([
+      {
+        $group: {
+          _id: {
+            country: { $ifNull: ["$country", "Unknown"] },
+            countryCode: { $ifNull: ["$countryCode", "UN"] },
+            countryFlag: { $ifNull: ["$countryFlag", "🌐"] },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]),
+    VisitorLog.aggregate([
+      {
+        $group: {
+          _id: { $ifNull: ["$browserName", "Unknown"] },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 8 },
+    ]),
+    VisitorLog.aggregate([
+      {
+        $group: {
+          _id: { $ifNull: ["$pathname", "/"] },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 8 },
+    ]),
+  ]);
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayDoc = dailyRaw.find((d) => d.date === todayStr);
+
+  return {
+    summary: {
+      totalVisits: totalCountResult[0]?.total || 0,
+      totalLogs,
+      uniqueVisitors: uniqueVisitors.length,
+      todayVisits: todayDoc?.count || 0,
+      avgDuration: Math.round(avgDurationResult[0]?.avgDuration || 0),
+    },
+    daily: [...dailyRaw].reverse(), // Ascending chronological order
+    deviceBreakdown: deviceStats.map((d: any) => ({
+      name: d._id,
+      count: d.count,
+    })),
+    countryBreakdown: countryStats.map((c: any) => ({
+      country: c._id.country,
+      countryCode: c._id.countryCode,
+      countryFlag: c._id.countryFlag,
+      count: c.count,
+    })),
+    browserBreakdown: browserStats.map((b: any) => ({
+      name: b._id,
+      count: b.count,
+    })),
+    topPages: topPages.map((p: any) => ({
+      pathname: p._id,
+      count: p.count,
+    })),
+  };
 };
 
 /**
- * Retrieve detailed visitor logs (with pagination and filters)
+ * Retrieve detailed visitor logs (with pagination, search, and filters)
  */
 const getVisitorLogs = async (query: {
   page?: number;
   limit?: number;
   country?: string;
   isBot?: boolean;
+  deviceType?: string;
+  searchTerm?: string;
 }) => {
-  const page = Number(query.page) || 1;
-  const limit = Math.min(Number(query.limit) || 50, 100);
+  const page = Math.max(Number(query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 100);
   const skip = (page - 1) * limit;
 
   const filter: any = {};
-  if (query.country) {
+  if (query.country && query.country !== "all") {
     filter.country = new RegExp(query.country, "i");
   }
   if (typeof query.isBot === "boolean") {
     filter.isBot = query.isBot;
   }
+  if (query.deviceType && query.deviceType !== "all") {
+    filter.deviceType = query.deviceType;
+  }
+  if (query.searchTerm && query.searchTerm.trim() !== "") {
+    const term = query.searchTerm.trim();
+    const regex = new RegExp(term, "i");
+    filter.$or = [
+      { ip: regex },
+      { city: regex },
+      { country: regex },
+      { browserName: regex },
+      { osName: regex },
+      { pathname: regex },
+      { visitorId: regex },
+      { referrer: regex },
+      { isp: regex },
+    ];
+  }
 
   const [logs, total] = await Promise.all([
-    VisitorLog.find(filter).sort({ visitedAt: -1 }).skip(skip).limit(limit),
+    VisitorLog.find(filter).sort({ visitedAt: -1 }).skip(skip).limit(limit).lean(),
     VisitorLog.countDocuments(filter),
   ]);
 
@@ -269,10 +386,27 @@ const getVisitorLogs = async (query: {
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit) || 1,
     },
     data: logs,
   };
+};
+
+/**
+ * Delete a specific visitor log entry
+ */
+const deleteVisitorLog = async (id: string) => {
+  return await VisitorLog.findByIdAndDelete(id);
+};
+
+/**
+ * Bulk clear visitor logs (e.g., all logs or bots only)
+ */
+const clearVisitorLogs = async (type?: string) => {
+  if (type === "bots") {
+    return await VisitorLog.deleteMany({ isBot: true });
+  }
+  return await VisitorLog.deleteMany({});
 };
 
 export const visitorServices = {
@@ -281,4 +415,6 @@ export const visitorServices = {
   trackVisit,
   getVisitorStats,
   getVisitorLogs,
+  deleteVisitorLog,
+  clearVisitorLogs,
 };

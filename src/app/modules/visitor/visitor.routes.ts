@@ -11,5 +11,7 @@ router.post("/duration", visitorControllers.recordDuration);
 // Protected analytics endpoints
 router.get("/stats", roleBasedProtection, visitorControllers.getStats);
 router.get("/logs", roleBasedProtection, visitorControllers.getLogs);
+router.delete("/logs/:id", roleBasedProtection, visitorControllers.deleteLog);
+router.delete("/logs", roleBasedProtection, visitorControllers.clearLogs);
 
 export const visitorRoutes = router;
