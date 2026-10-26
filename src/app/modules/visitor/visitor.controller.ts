@@ -8,6 +8,15 @@ const trackVisitor = async (req: Request, res: Response) => {
   try {
     const log = await visitorServices.recordVisitorLog(req, req.body);
 
+    if (!log) {
+      return res.status(200).json({
+        success: true,
+        excluded: true,
+        message: "Visitor excluded from tracking (owner/admin device)",
+        data: null,
+      });
+    }
+
     // Set cookie if not already present
     if (!req.cookies?.visitor_id && log.visitorId) {
       res.cookie("visitor_id", log.visitorId, {
@@ -48,7 +57,8 @@ const recordDuration = async (req: Request, res: Response) => {
     await visitorServices.updateVisitDuration(
       sessionId,
       Number(durationSeconds) || 0,
-      pathname
+      pathname,
+      req
     );
 
     res.status(200).json({

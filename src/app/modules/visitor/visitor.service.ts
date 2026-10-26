@@ -6,6 +6,9 @@ import {
   extractClientIp,
   parseUserAgent,
   resolveGeolocation,
+  EXCLUDED_IPS,
+  isExcludedIp,
+  isExcludedRequest,
 } from "./visitor.helper";
 import redis from "../../utils/redis";
 
@@ -18,6 +21,11 @@ const recordVisitorLog = async (
 ) => {
   // 1. IP & Network
   const { ip, isLocalIp, ipType } = extractClientIp(req);
+
+  // Check if IP / request is excluded (e.g. laptop 103.42.53.244 or admin device)
+  if (isExcludedRequest(req, ip)) {
+    return null;
+  }
 
   // 2. User Agent & Device parsing
   const rawUserAgent = req.headers["user-agent"] || "";
@@ -189,8 +197,12 @@ const recordVisitorLog = async (
 const updateVisitDuration = async (
   sessionId: string,
   durationSeconds: number,
-  pathname?: string
+  pathname?: string,
+  req?: Request
 ) => {
+  if (req && isExcludedRequest(req)) {
+    return null;
+  }
   if (!sessionId) return null;
 
   const filter: any = { sessionId };
@@ -202,6 +214,9 @@ const updateVisitDuration = async (
   const latestLog = await VisitorLog.findOne(filter).sort({ visitedAt: -1 });
 
   if (latestLog) {
+    if (isExcludedIp(latestLog.ip)) {
+      return null;
+    }
     const newDuration = Math.max(latestLog.durationSeconds || 0, Math.round(durationSeconds));
     latestLog.durationSeconds = newDuration;
     latestLog.lastActiveAt = new Date();
@@ -215,7 +230,10 @@ const updateVisitDuration = async (
 /**
  * Backwards compatibility simple visit counter
  */
-const trackVisit = async () => {
+const trackVisit = async (ip?: string) => {
+  if (ip && isExcludedIp(ip)) {
+    return;
+  }
   const today = new Date().toISOString().split("T")[0];
   const key = `visitor_count:${today}`;
 
@@ -236,6 +254,8 @@ const trackVisit = async () => {
  * Retrieve comprehensive aggregated stats including daily visits, device breakdown, top countries, and top pages
  */
 const getVisitorStats = async () => {
+  const excludeFilter = { ip: { $nin: EXCLUDED_IPS } };
+
   const [
     dailyRaw,
     totalCountResult,
@@ -251,13 +271,14 @@ const getVisitorStats = async () => {
     Visitor.aggregate([
       { $group: { _id: null, total: { $sum: "$count" } } },
     ]),
-    VisitorLog.countDocuments(),
-    VisitorLog.distinct("visitorId"),
+    VisitorLog.countDocuments(excludeFilter),
+    VisitorLog.distinct("visitorId", excludeFilter),
     VisitorLog.aggregate([
-      { $match: { durationSeconds: { $gt: 0 } } },
+      { $match: { durationSeconds: { $gt: 0 }, ...excludeFilter } },
       { $group: { _id: null, avgDuration: { $avg: "$durationSeconds" } } },
     ]),
     VisitorLog.aggregate([
+      { $match: excludeFilter },
       {
         $group: {
           _id: { $ifNull: ["$deviceType", "desktop"] },
@@ -267,6 +288,7 @@ const getVisitorStats = async () => {
       { $sort: { count: -1 } },
     ]),
     VisitorLog.aggregate([
+      { $match: excludeFilter },
       {
         $group: {
           _id: {
@@ -281,6 +303,7 @@ const getVisitorStats = async () => {
       { $limit: 10 },
     ]),
     VisitorLog.aggregate([
+      { $match: excludeFilter },
       {
         $group: {
           _id: { $ifNull: ["$browserName", "Unknown"] },
@@ -291,6 +314,7 @@ const getVisitorStats = async () => {
       { $limit: 8 },
     ]),
     VisitorLog.aggregate([
+      { $match: excludeFilter },
       {
         $group: {
           _id: { $ifNull: ["$pathname", "/"] },
@@ -350,35 +374,47 @@ const getVisitorLogs = async (query: {
   const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 100);
   const skip = (page - 1) * limit;
 
-  const filter: any = {};
+  const baseFilter: any = {
+    ip: { $nin: EXCLUDED_IPS },
+  };
+
   if (query.country && query.country !== "all") {
-    filter.country = new RegExp(query.country, "i");
+    baseFilter.country = new RegExp(query.country, "i");
   }
   if (typeof query.isBot === "boolean") {
-    filter.isBot = query.isBot;
+    baseFilter.isBot = query.isBot;
   }
   if (query.deviceType && query.deviceType !== "all") {
-    filter.deviceType = query.deviceType;
+    baseFilter.deviceType = query.deviceType;
   }
+
+  let finalFilter: any = baseFilter;
   if (query.searchTerm && query.searchTerm.trim() !== "") {
     const term = query.searchTerm.trim();
     const regex = new RegExp(term, "i");
-    filter.$or = [
-      { ip: regex },
-      { city: regex },
-      { country: regex },
-      { browserName: regex },
-      { osName: regex },
-      { pathname: regex },
-      { visitorId: regex },
-      { referrer: regex },
-      { isp: regex },
-    ];
+    finalFilter = {
+      $and: [
+        baseFilter,
+        {
+          $or: [
+            { ip: regex },
+            { city: regex },
+            { country: regex },
+            { browserName: regex },
+            { osName: regex },
+            { pathname: regex },
+            { visitorId: regex },
+            { referrer: regex },
+            { isp: regex },
+          ],
+        },
+      ],
+    };
   }
 
   const [logs, total] = await Promise.all([
-    VisitorLog.find(filter).sort({ visitedAt: -1 }).skip(skip).limit(limit).lean(),
-    VisitorLog.countDocuments(filter),
+    VisitorLog.find(finalFilter).sort({ visitedAt: -1 }).skip(skip).limit(limit).lean(),
+    VisitorLog.countDocuments(finalFilter),
   ]);
 
   return {

@@ -1,5 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { visitorServices } from "../modules/visitor/visitor.service";
+import {
+  extractClientIp,
+  isExcludedRequest,
+} from "../modules/visitor/visitor.helper";
 
 export const trackVisitor = async (
   req: Request,
@@ -16,6 +20,12 @@ export const trackVisitor = async (
       return next();
     }
 
+    // Skip tracking for excluded IPs (e.g. laptop 103.42.53.244)
+    const { ip } = extractClientIp(req);
+    if (isExcludedRequest(req, ip)) {
+      return next();
+    }
+
     // Only set fallback cookie if missing
     const visitorToken = req.cookies?.visitor_id;
     if (!visitorToken) {
@@ -26,7 +36,7 @@ export const trackVisitor = async (
         secure: process.env.NODE_ENV === "production",
         sameSite: "none",
       });
-      await visitorServices.trackVisit();
+      await visitorServices.trackVisit(ip);
     }
   } catch (error) {
     console.error("Error in trackVisitor middleware:", error);

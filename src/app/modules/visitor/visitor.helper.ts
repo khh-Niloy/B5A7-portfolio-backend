@@ -21,6 +21,44 @@ export interface IGeoResult {
 }
 
 /**
+ * Known owner/admin IPs to exclude from tracking & analytics
+ */
+export const EXCLUDED_IPS: string[] = [
+  "103.42.53.244", // User's laptop
+  ...(process.env.EXCLUDED_IPS
+    ? process.env.EXCLUDED_IPS.split(",").map((s) => s.trim()).filter(Boolean)
+    : []),
+];
+
+/**
+ * Checks if a given IP address belongs to the excluded list.
+ */
+export const isExcludedIp = (ip?: string | null): boolean => {
+  if (!ip) return false;
+  const clean = ip.trim();
+  return EXCLUDED_IPS.some(
+    (ex) => clean === ex || clean.startsWith(ex)
+  );
+};
+
+/**
+ * Checks if a request originates from an excluded IP or contains an excluded IP in headers.
+ */
+export const isExcludedRequest = (req: Request, ip?: string): boolean => {
+  if (ip && isExcludedIp(ip)) return true;
+  const detected = extractClientIp(req).ip;
+  if (isExcludedIp(detected)) return true;
+
+  const xff = String(req.headers["x-forwarded-for"] || "");
+  const cf = String(req.headers["cf-connecting-ip"] || "");
+  const real = String(req.headers["x-real-ip"] || "");
+
+  return EXCLUDED_IPS.some(
+    (ex) => xff.includes(ex) || cf.includes(ex) || real.includes(ex)
+  );
+};
+
+/**
  * Normalizes and extracts the real client IP address from request headers or socket.
  */
 export const extractClientIp = (
