@@ -24,7 +24,8 @@ export interface IGeoResult {
  * Known owner/admin IPs to exclude from tracking & analytics
  */
 export const EXCLUDED_IPS: string[] = [
-  "103.42.53.244", // User's laptop
+  "103.42.53.244", // User's laptop IP
+  "103.42.53.",    // User's laptop / ISP dynamic IP pool
   ...(process.env.EXCLUDED_IPS
     ? process.env.EXCLUDED_IPS.split(",").map((s) => s.trim()).filter(Boolean)
     : []),

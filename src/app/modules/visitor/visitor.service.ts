@@ -254,7 +254,7 @@ const trackVisit = async (ip?: string) => {
  * Retrieve comprehensive aggregated stats including daily visits, device breakdown, top countries, and top pages
  */
 const getVisitorStats = async () => {
-  const excludeFilter = { ip: { $nin: EXCLUDED_IPS } };
+  const excludeFilter = { ip: { $not: /^103\.42\.53\./, $nin: EXCLUDED_IPS } };
 
   const [
     dailyRaw,
@@ -375,7 +375,7 @@ const getVisitorLogs = async (query: {
   const skip = (page - 1) * limit;
 
   const baseFilter: any = {
-    ip: { $nin: EXCLUDED_IPS },
+    ip: { $not: /^103\.42\.53\./, $nin: EXCLUDED_IPS },
   };
 
   if (query.country && query.country !== "all") {
