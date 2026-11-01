@@ -34,6 +34,7 @@ export const projectsSchema = new Schema<IProjects>(
     keyDecisions: { type: String, required: false },
     resultsEvidence: { type: String, required: false },
     limitationsNextSteps: { type: String, required: false },
+    recentUpdates: { type: String, required: false },
 
     // Legacy fields preserved for backward compatibility
     shortDes: { type: String, required: false },

@@ -25,6 +25,7 @@ export interface IProjects {
   keyDecisions?: string; // Section 5. Three Key Engineering Decisions
   resultsEvidence?: string; // Section 6. Results and Evidence
   limitationsNextSteps?: string; // Section 7. Limitations and Next Steps
+  recentUpdates?: string; // Section 8. Recent Updates
 
   // Legacy fields preserved for backward compatibility
   shortDes?: string;
